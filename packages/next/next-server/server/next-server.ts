@@ -128,7 +128,7 @@ export default class Server {
   quiet: boolean
   nextConfig: NextConfig
   distDir: string
-  pagesDir?: string
+  pagesDirs?: string[]
   publicDir: string
   hasStaticDir: boolean
   serverBuildDir: string

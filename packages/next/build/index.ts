@@ -164,13 +164,15 @@ export default async function build(
     const telemetry = new Telemetry({ distDir })
 
     const publicDir = path.join(dir, 'public')
-    const pagesDir = findPagesDir(dir)
+    const pagesDirs = findPagesDir(dir, config.pagesPaths)
     const hasPublicDir = await fileExists(publicDir)
 
     telemetry.record(
       eventCliSession(PHASE_PRODUCTION_BUILD, dir, {
         cliCommand: 'build',
-        isSrcDir: path.relative(dir, pagesDir!).startsWith('src'),
+        isSrcDir:
+          pagesDirs.length === 1 &&
+          path.relative(dir, pagesDirs[0]!).startsWith('src'),
         hasNowJson: !!(await findUp('now.json', { cwd: dir })),
         isCustomServer: null,
       })
@@ -182,14 +184,14 @@ export default async function build(
 
     const ignoreTypeScriptErrors = Boolean(config.typescript?.ignoreBuildErrors)
     await traceAsyncFn(tracer.startSpan('verify-typescript-setup'), () =>
-      verifyTypeScriptSetup(dir, pagesDir, !ignoreTypeScriptErrors)
+      verifyTypeScriptSetup(dir, pagesDirs, !ignoreTypeScriptErrors)
     )
 
     const isLikeServerless = isTargetLikeServerless(target)
 
     const pagePaths: string[] = await traceAsyncFn(
       tracer.startSpan('collect-pages'),
-      () => collectPages(pagesDir, config.pageExtensions)
+      () => collectPages(pagesDirs, config.pageExtensions)
     )
 
     // needed for static exporting since we want to replace with HTML
@@ -437,7 +439,7 @@ export default async function build(
             isServer: false,
             config,
             target,
-            pagesDir,
+            pagesDirs,
             entrypoints: entrypoints.client,
             rewrites,
           }),
@@ -447,7 +449,7 @@ export default async function build(
             isServer: true,
             config,
             target,
-            pagesDir,
+            pagesDirs,
             entrypoints: entrypoints.server,
             rewrites,
           }),
@@ -1430,7 +1432,7 @@ export default async function build(
       printTreeView(Object.keys(mappedPages), allPageInfos, isLikeServerless, {
         distPath: distDir,
         buildId: buildId,
-        pagesDir,
+        pagesDirs,
         useStatic404,
         pageExtensions: config.pageExtensions,
         buildManifest,

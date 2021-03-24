@@ -1,6 +1,32 @@
 import { promises } from 'fs'
 import { join } from 'path'
 
+const readdirs = async (dirs: string[], ignore?: RegExp) => {
+  const results = await Promise.all(
+    dirs.map((dir) =>
+      promises.readdir(dir).then((contents) => {
+        return {
+          base: dir,
+          contents: contents.filter(
+            (content) => !ignore || ignore.test(content)
+          ),
+        }
+      })
+    )
+  )
+  const unique = new Set<string>()
+  results.forEach((result) => {
+    result.contents = result.contents.filter((content) => {
+      if (unique.has(content)) {
+        return false
+      }
+      unique.add(content)
+      return true
+    })
+  })
+  return results
+}
+
 /**
  * Recursively read directory
  * @param  {string} dir Directory to read
@@ -10,31 +36,34 @@ import { join } from 'path'
  * @returns Promise array holding all relative paths
  */
 export async function recursiveReadDir(
-  dir: string,
+  dirs: string[],
   filter: RegExp,
   ignore?: RegExp,
   arr: string[] = [],
-  rootDir: string = dir
+  rootDir: string = dirs[0]
 ): Promise<string[]> {
-  const result = await promises.readdir(dir)
+  const result = await readdirs(dirs, ignore)
 
   await Promise.all(
-    result.map(async (part: string) => {
-      const absolutePath = join(dir, part)
-      if (ignore && ignore.test(part)) return
+    result.map(async ({ base, contents }) => {
+      await Promise.all(
+        contents.map(async (content) => {
+          const absolutePath = join(base, content)
 
-      const pathStat = await promises.stat(absolutePath)
+          const pathStat = await promises.stat(absolutePath)
 
-      if (pathStat.isDirectory()) {
-        await recursiveReadDir(absolutePath, filter, ignore, arr, rootDir)
-        return
-      }
+          if (pathStat.isDirectory()) {
+            await recursiveReadDir([absolutePath], filter, ignore, arr, rootDir)
+            return
+          }
 
-      if (!filter.test(part)) {
-        return
-      }
+          if (!filter.test(content)) {
+            return
+          }
 
-      arr.push(absolutePath.replace(rootDir, ''))
+          arr.push(absolutePath.replace(rootDir, ''))
+        })
+      )
     })
   )
 

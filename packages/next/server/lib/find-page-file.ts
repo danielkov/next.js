@@ -17,7 +17,7 @@ async function isTrueCasePagePath(pagePath: string, pagesDir: string) {
   return (await Promise.all(segmentExistsPromises)).every(Boolean)
 }
 
-export async function findPageFile(
+async function findPageFileForRoot(
   rootDir: string,
   normalizedPagePath: string,
   pageExtensions: string[]
@@ -29,9 +29,9 @@ export async function findPageFile(
   for (const extension of pageExtensions) {
     if (!normalizedPagePath.endsWith('/index')) {
       const relativePagePath = `${page}.${extension}`
-      const pagePath = join(rootDir, relativePagePath)
+      const pagePaths = join(rootDir, relativePagePath)
 
-      if (await isWriteable(pagePath)) {
+      if (await isWriteable(pagePaths)) {
         foundPagePaths.push(relativePagePath)
       }
     }
@@ -62,4 +62,23 @@ export async function findPageFile(
   }
 
   return foundPagePaths[0]
+}
+
+export async function findPageFile(
+  rootDirs: string[],
+  normalizedPagePath: string,
+  pageExtensions: string[]
+): Promise<{ pageBase: string; pagePath: string } | null> {
+  for (let index = 0; index < rootDirs.length; index++) {
+    const pageBase = rootDirs[index]
+    const pagePath = await findPageFileForRoot(
+      pageBase,
+      normalizedPagePath,
+      pageExtensions
+    )
+    if (pagePath) {
+      return { pageBase, pagePath }
+    }
+  }
+  return null
 }

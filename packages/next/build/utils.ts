@@ -41,11 +41,11 @@ const fsStatGzip = (file: string) => {
 }
 
 export function collectPages(
-  directory: string,
+  directories: string[],
   pageExtensions: string[]
 ): Promise<string[]> {
   return recursiveReadDir(
-    directory,
+    directories,
     new RegExp(`\\.(?:${pageExtensions.join('|')})$`)
   )
 }
@@ -67,14 +67,14 @@ export async function printTreeView(
   {
     distPath,
     buildId,
-    pagesDir,
+    pagesDirs,
     pageExtensions,
     buildManifest,
     useStatic404,
   }: {
     distPath: string
     buildId: string
-    pagesDir: string
+    pagesDirs: string[]
     pageExtensions: string[]
     buildManifest: BuildManifest
     useStatic404: boolean
@@ -105,7 +105,7 @@ export async function printTreeView(
     ) as [string, string, string],
   ]
 
-  const hasCustomApp = await findPageFile(pagesDir, '/_app', pageExtensions)
+  const hasCustomApp = await findPageFile(pagesDirs, '/_app', pageExtensions)
 
   pageInfos.set('/404', {
     ...(pageInfos.get('/404') || pageInfos.get('/_error')),

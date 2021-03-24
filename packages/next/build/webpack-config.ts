@@ -187,7 +187,7 @@ export default async function getBaseWebpackConfig(
     config,
     dev = false,
     isServer = false,
-    pagesDir,
+    pagesDirs,
     target = 'server',
     reactProductionProfiling = false,
     entrypoints,
@@ -197,7 +197,7 @@ export default async function getBaseWebpackConfig(
     config: NextConfig
     dev?: boolean
     isServer?: boolean
-    pagesDir: string
+    pagesDirs: string[]
     target?: string
     reactProductionProfiling?: boolean
     entrypoints: WebpackEntrypoints
@@ -238,7 +238,7 @@ export default async function getBaseWebpackConfig(
       options: {
         isServer,
         distDir,
-        pagesDir,
+        pagesDirs,
         cwd: dir,
         // Webpack 5 has a built-in loader cache
         cache: !isWebpack5,
@@ -380,7 +380,8 @@ export default async function getBaseWebpackConfig(
     ],
     alias: {
       next: NEXT_PROJECT_ROOT,
-      [PAGES_DIR_ALIAS]: pagesDir,
+      // TODO: this probably won't work. It needs a proper solution for Webpack
+      [PAGES_DIR_ALIAS]: isWebpack5 ? pagesDirs : pagesDirs.join(':'),
       [DOT_NEXT_ALIAS]: distDir,
       ...getOptimizedAliases(isServer),
       ...getReactProfilingInProduction(),
@@ -546,13 +547,12 @@ export default async function getBaseWebpackConfig(
 
   const crossOrigin = config.crossOrigin
 
-  let customAppFile: string | null = await findPageFile(
-    pagesDir,
-    '/_app',
-    config.pageExtensions
-  )
-  if (customAppFile) {
-    customAppFile = path.resolve(path.join(pagesDir, customAppFile))
+  let customApp = await findPageFile(pagesDirs, '/_app', config.pageExtensions)
+  let customAppFile = null
+  if (customApp) {
+    customAppFile = path.resolve(
+      path.join(customApp.pageBase, customApp.pagePath)
+    )
   }
 
   const conformanceConfig = Object.assign(
@@ -884,7 +884,7 @@ export default async function getBaseWebpackConfig(
       webassemblyModuleFilename: 'static/wasm/[modulehash].wasm',
     },
     performance: false,
-    resolve: resolveConfig,
+    resolve: resolveConfig as any,
     resolveLoader: {
       // The loaders Next.js provides
       alias: [
