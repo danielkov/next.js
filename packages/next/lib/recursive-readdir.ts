@@ -61,7 +61,7 @@ export async function recursiveReadDir(
             return
           }
 
-          arr.push(absolutePath.replace(rootDir, ''))
+          arr.push(absolutePath.replace(base, ''))
         })
       )
     })

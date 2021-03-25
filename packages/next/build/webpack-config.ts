@@ -380,8 +380,8 @@ export default async function getBaseWebpackConfig(
     ],
     alias: {
       next: NEXT_PROJECT_ROOT,
-      // TODO: this probably won't work. It needs a proper solution for Webpack
-      [PAGES_DIR_ALIAS]: isWebpack5 ? pagesDirs : pagesDirs.join(':'),
+      // TODO: how to add array as alias https://github.com/webpack/webpack/issues/6817
+      [PAGES_DIR_ALIAS]: pagesDirs[0],
       [DOT_NEXT_ALIAS]: distDir,
       ...getOptimizedAliases(isServer),
       ...getReactProfilingInProduction(),
@@ -884,7 +884,7 @@ export default async function getBaseWebpackConfig(
       webassemblyModuleFilename: 'static/wasm/[modulehash].wasm',
     },
     performance: false,
-    resolve: resolveConfig as any,
+    resolve: resolveConfig,
     resolveLoader: {
       // The loaders Next.js provides
       alias: [
