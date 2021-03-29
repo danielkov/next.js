@@ -17,7 +17,7 @@ import {
   SERVER_PROPS_SSG_CONFLICT,
 } from '../lib/constants'
 import prettyBytes from '../lib/pretty-bytes'
-import { recursiveReadDir } from '../lib/recursive-readdir'
+import { recursiveReadDirs } from '../lib/recursive-readdir'
 import { getRouteMatcher, getRouteRegex } from '../next-server/lib/router/utils'
 import { isDynamicRoute } from '../next-server/lib/router/utils/is-dynamic'
 import escapePathDelimiters from '../next-server/lib/router/utils/escape-path-delimiters'
@@ -44,7 +44,7 @@ export function collectPages(
   directories: string[],
   pageExtensions: string[]
 ): Promise<string[]> {
-  return recursiveReadDir(
+  return recursiveReadDirs(
     directories,
     new RegExp(`\\.(?:${pageExtensions.join('|')})$`)
   )

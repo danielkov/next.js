@@ -1,32 +1,6 @@
 import { promises } from 'fs'
 import { join } from 'path'
 
-const readdirs = async (dirs: string[], ignore?: RegExp) => {
-  const results = await Promise.all(
-    dirs.map((dir) =>
-      promises.readdir(dir).then((contents) => {
-        return {
-          base: dir,
-          contents: contents.filter(
-            (content) => !ignore || ignore.test(content)
-          ),
-        }
-      })
-    )
-  )
-  const unique = new Set<string>()
-  results.forEach((result) => {
-    result.contents = result.contents.filter((content) => {
-      if (unique.has(content)) {
-        return false
-      }
-      unique.add(content)
-      return true
-    })
-  })
-  return results
-}
-
 /**
  * Recursively read directory
  * @param  {string} dir Directory to read
@@ -36,36 +10,51 @@ const readdirs = async (dirs: string[], ignore?: RegExp) => {
  * @returns Promise array holding all relative paths
  */
 export async function recursiveReadDir(
-  dirs: string[],
+  dir: string,
   filter: RegExp,
   ignore?: RegExp,
   arr: string[] = [],
-  rootDir: string = dirs[0]
+  rootDir: string = dir
 ): Promise<string[]> {
-  const result = await readdirs(dirs, ignore)
+  const result = await promises.readdir(dir)
 
   await Promise.all(
-    result.map(async ({ base, contents }) => {
-      await Promise.all(
-        contents.map(async (content) => {
-          const absolutePath = join(base, content)
+    result.map(async (part: string) => {
+      const absolutePath = join(dir, part)
+      if (ignore && ignore.test(part)) return
 
-          const pathStat = await promises.stat(absolutePath)
+      const pathStat = await promises.stat(absolutePath)
 
-          if (pathStat.isDirectory()) {
-            await recursiveReadDir([absolutePath], filter, ignore, arr, rootDir)
-            return
-          }
+      if (pathStat.isDirectory()) {
+        await recursiveReadDir(absolutePath, filter, ignore, arr, rootDir)
+        return
+      }
 
-          if (!filter.test(content)) {
-            return
-          }
+      if (!filter.test(part)) {
+        return
+      }
 
-          arr.push(absolutePath.replace(base, ''))
-        })
-      )
+      arr.push(absolutePath.replace(rootDir, ''))
     })
   )
 
   return arr.sort()
+}
+
+export async function recursiveReadDirs(
+  dirs: string[],
+  filter: RegExp,
+  ignore?: RegExp
+): Promise<string[]> {
+  const results = await Promise.all(
+    dirs.map((directory) => {
+      return recursiveReadDir(directory, filter, ignore)
+    })
+  )
+  return [
+    ...results.reduce((result, next) => {
+      next.forEach(result.add, dirs)
+      return result
+    }, new Set<string>()),
+  ]
 }

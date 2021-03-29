@@ -96,6 +96,14 @@ function parseJsonFile(filePath: string) {
   }
 }
 
+function aliasesToArray(aliases: {
+  [pkg: string]: string
+}): { name: string; alias: string | string[] }[] {
+  return Object.entries(aliases).map(([name, alias]) => {
+    return { name, alias }
+  })
+}
+
 function getOptimizedAliases(isServer: boolean): { [pkg: string]: string } {
   if (isServer) {
     return {}
@@ -339,13 +347,14 @@ export default async function getBaseWebpackConfig(
     resolvedBaseUrl = path.resolve(dir, jsConfig.compilerOptions.baseUrl)
   }
 
-  function getReactProfilingInProduction() {
+  function getReactProfilingInProduction(): { [key: string]: string } {
     if (reactProductionProfiling) {
       return {
         'react-dom$': 'react-dom/profiling',
         'scheduler/tracing': 'scheduler/tracing-profiling',
       }
     }
+    return {}
   }
 
   const clientResolveRewrites = require.resolve(
@@ -378,17 +387,30 @@ export default async function getBaseWebpackConfig(
       'node_modules',
       ...nodePathList, // Support for NODE_PATH environment variable
     ],
-    alias: {
-      next: NEXT_PROJECT_ROOT,
-      // TODO: how to add array as alias https://github.com/webpack/webpack/issues/6817
-      [PAGES_DIR_ALIAS]: pagesDirs[0],
-      [DOT_NEXT_ALIAS]: distDir,
-      ...getOptimizedAliases(isServer),
-      ...getReactProfilingInProduction(),
-      [clientResolveRewrites]: hasRewrites
-        ? clientResolveRewrites
-        : clientResolveRewritesNoop,
-    },
+    alias: isWebpack5
+      ? {
+          next: NEXT_PROJECT_ROOT,
+          [PAGES_DIR_ALIAS]: pagesDirs,
+          [DOT_NEXT_ALIAS]: distDir,
+          ...getOptimizedAliases(isServer),
+          ...getReactProfilingInProduction(),
+          [clientResolveRewrites]: hasRewrites
+            ? clientResolveRewrites
+            : clientResolveRewritesNoop,
+        }
+      : [
+          { name: 'next', alias: NEXT_PROJECT_ROOT },
+          { name: PAGES_DIR_ALIAS, alias: pagesDirs },
+          { name: DOT_NEXT_ALIAS, alias: distDir },
+          {
+            name: clientResolveRewrites,
+            alias: hasRewrites
+              ? clientResolveRewrites
+              : clientResolveRewritesNoop,
+          },
+          ...aliasesToArray(getOptimizedAliases(isServer)),
+          ...aliasesToArray(getReactProfilingInProduction()),
+        ],
     ...(isWebpack5 && !isServer
       ? {
           // Full list of old polyfills is accessible here:
@@ -884,6 +906,8 @@ export default async function getBaseWebpackConfig(
       webassemblyModuleFilename: 'static/wasm/[modulehash].wasm',
     },
     performance: false,
+    // TODO: fix this
+    // @ts-ignore
     resolve: resolveConfig,
     resolveLoader: {
       // The loaders Next.js provides
