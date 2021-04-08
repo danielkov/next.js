@@ -96,6 +96,14 @@ function parseJsonFile(filePath: string) {
   }
 }
 
+function aliasesToArray(aliases: {
+  [pkg: string]: string
+}): { name: string; alias: string | string[] }[] {
+  return Object.entries(aliases).map(([name, alias]) => {
+    return { name, alias }
+  })
+}
+
 function getOptimizedAliases(isServer: boolean): { [pkg: string]: string } {
   if (isServer) {
     return {}
@@ -187,7 +195,7 @@ export default async function getBaseWebpackConfig(
     config,
     dev = false,
     isServer = false,
-    pagesDir,
+    pagesDirs,
     target = 'server',
     reactProductionProfiling = false,
     entrypoints,
@@ -197,7 +205,7 @@ export default async function getBaseWebpackConfig(
     config: NextConfig
     dev?: boolean
     isServer?: boolean
-    pagesDir: string
+    pagesDirs: string[]
     target?: string
     reactProductionProfiling?: boolean
     entrypoints: WebpackEntrypoints
@@ -241,7 +249,7 @@ export default async function getBaseWebpackConfig(
       options: {
         isServer,
         distDir,
-        pagesDir,
+        pagesDirs,
         cwd: dir,
         // Webpack 5 has a built-in loader cache
         cache: !isWebpack5,
@@ -342,13 +350,14 @@ export default async function getBaseWebpackConfig(
     resolvedBaseUrl = path.resolve(dir, jsConfig.compilerOptions.baseUrl)
   }
 
-  function getReactProfilingInProduction() {
+  function getReactProfilingInProduction(): { [key: string]: string } {
     if (reactProductionProfiling) {
       return {
         'react-dom$': 'react-dom/profiling',
         'scheduler/tracing': 'scheduler/tracing-profiling',
       }
     }
+    return {}
   }
 
   const clientResolveRewrites = require.resolve(
@@ -381,19 +390,30 @@ export default async function getBaseWebpackConfig(
       'node_modules',
       ...nodePathList, // Support for NODE_PATH environment variable
     ],
-    alias: {
-      next: NEXT_PROJECT_ROOT,
-      [PAGES_DIR_ALIAS]: pagesDir,
-      [DOT_NEXT_ALIAS]: distDir,
-      ...getOptimizedAliases(isServer),
-      ...getReactProfilingInProduction(),
-      [clientResolveRewrites]: hasRewrites
-        ? clientResolveRewrites
-        : // With webpack 5 an alias can be pointed to false to noop
-        isWebpack5
-        ? false
-        : clientResolveRewritesNoop,
-    },
+    alias: isWebpack5
+      ? {
+          next: NEXT_PROJECT_ROOT,
+          [PAGES_DIR_ALIAS]: pagesDirs,
+          [DOT_NEXT_ALIAS]: distDir,
+          ...getOptimizedAliases(isServer),
+          ...getReactProfilingInProduction(),
+          [clientResolveRewrites]: hasRewrites
+            ? clientResolveRewrites
+            : clientResolveRewritesNoop,
+        }
+      : [
+          { name: 'next', alias: NEXT_PROJECT_ROOT },
+          { name: PAGES_DIR_ALIAS, alias: pagesDirs },
+          { name: DOT_NEXT_ALIAS, alias: distDir },
+          {
+            name: clientResolveRewrites,
+            alias: hasRewrites
+              ? clientResolveRewrites
+              : clientResolveRewritesNoop,
+          },
+          ...aliasesToArray(getOptimizedAliases(isServer)),
+          ...aliasesToArray(getReactProfilingInProduction()),
+        ],
     ...(isWebpack5 && !isServer
       ? {
           // Full list of old polyfills is accessible here:
@@ -570,13 +590,12 @@ export default async function getBaseWebpackConfig(
 
   const crossOrigin = config.crossOrigin
 
-  let customAppFile: string | null = await findPageFile(
-    pagesDir,
-    '/_app',
-    config.pageExtensions
-  )
-  if (customAppFile) {
-    customAppFile = path.resolve(path.join(pagesDir, customAppFile))
+  let customApp = await findPageFile(pagesDirs, '/_app', config.pageExtensions)
+  let customAppFile = null
+  if (customApp) {
+    customAppFile = path.resolve(
+      path.join(customApp.pageBase, customApp.pagePath)
+    )
   }
 
   const conformanceConfig = Object.assign(
@@ -908,6 +927,8 @@ export default async function getBaseWebpackConfig(
       webassemblyModuleFilename: 'static/wasm/[modulehash].wasm',
     },
     performance: false,
+    // TODO: fix this
+    // @ts-ignore
     resolve: resolveConfig,
     resolveLoader: {
       // The loaders Next.js provides

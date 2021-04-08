@@ -26,7 +26,7 @@ const customBabelLoader = babelLoader((babel) => {
     customOptions(opts) {
       const custom = {
         isServer: opts.isServer,
-        pagesDir: opts.pagesDir,
+        pagesDirs: opts.pagesDirs,
         babelPresetPlugins: opts.babelPresetPlugins,
         development: opts.development,
         hasReactRefresh: opts.hasReactRefresh,
@@ -61,7 +61,7 @@ const customBabelLoader = babelLoader((babel) => {
       delete loader.isServer
       delete loader.cache
       delete loader.distDir
-      delete loader.pagesDir
+      delete loader.pagesDirs
       delete loader.babelPresetPlugins
       delete loader.development
       delete loader.hasReactRefresh
@@ -74,7 +74,7 @@ const customBabelLoader = babelLoader((babel) => {
         source,
         customOptions: {
           isServer,
-          pagesDir,
+          pagesDirs,
           babelPresetPlugins,
           development,
           hasReactRefresh,
@@ -84,7 +84,9 @@ const customBabelLoader = babelLoader((babel) => {
     ) {
       const filename = this.resourcePath
       const options = Object.assign({}, cfg.options)
-      const isPageFile = filename.startsWith(pagesDir)
+      const isPageFile = new RegExp(`^((${pagesDirs.join(')|(')}))`).test(
+        filename
+      )
 
       if (cfg.hasFilesystemConfig()) {
         for (const file of [cfg.babelrc, cfg.config]) {

@@ -40,3 +40,21 @@ export async function recursiveReadDir(
 
   return arr.sort()
 }
+
+export async function recursiveReadDirs(
+  dirs: string[],
+  filter: RegExp,
+  ignore?: RegExp
+): Promise<string[]> {
+  const results = await Promise.all(
+    dirs.map((directory) => {
+      return recursiveReadDir(directory, filter, ignore)
+    })
+  )
+  return [
+    ...results.reduce((result, next) => {
+      next.forEach(result.add, dirs)
+      return result
+    }, new Set<string>()),
+  ]
+}

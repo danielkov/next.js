@@ -13,14 +13,14 @@ import { writeConfigurationDefaults } from './typescript/writeConfigurationDefau
 
 export async function verifyTypeScriptSetup(
   dir: string,
-  pagesDir: string,
+  pagesDirs: string[],
   typeCheckPreflight: boolean
 ): Promise<TypeCheckResult | boolean> {
   const tsConfigPath = path.join(dir, 'tsconfig.json')
 
   try {
     // Check if the project uses TypeScript:
-    const intent = await getTypeScriptIntent(dir, pagesDir)
+    const intent = await getTypeScriptIntent(dir, pagesDirs)
     if (!intent) {
       return false
     }

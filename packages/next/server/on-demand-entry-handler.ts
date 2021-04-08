@@ -30,12 +30,12 @@ export default function onDemandEntryHandler(
   watcher: any,
   multiCompiler: webpack.MultiCompiler,
   {
-    pagesDir,
+    pagesDirs,
     pageExtensions,
     maxInactiveAge,
     pagesBufferLength,
   }: {
-    pagesDir: string
+    pagesDirs: string[]
     pageExtensions: string[]
     maxInactiveAge: number
     pagesBufferLength: number
@@ -143,20 +143,23 @@ export default function onDemandEntryHandler(
         throw pageNotFoundError(page)
       }
 
-      let pagePath = await findPageFile(
-        pagesDir,
+      // Find page files, get the most relevant one
+      let pageFile = await findPageFile(
+        pagesDirs,
         normalizedPagePath,
         pageExtensions
       )
 
       // Default the /_error route to the Next.js provided default page
-      if (page === '/_error' && pagePath === null) {
-        pagePath = 'next/dist/pages/_error'
+      if (page === '/_error' && pageFile?.pagePath === null) {
+        pageFile.pagePath = 'next/dist/pages/_error'
       }
 
-      if (pagePath === null) {
+      if (pageFile === null) {
         throw pageNotFoundError(normalizedPagePath)
       }
+
+      const { pagePath, pageBase } = pageFile
 
       let pageUrl = pagePath.replace(/\\/g, '/')
 
@@ -171,7 +174,7 @@ export default function onDemandEntryHandler(
       const clientBundlePath = posix.join('pages', bundleFile)
       const absolutePagePath = pagePath.startsWith('next/dist/pages')
         ? require.resolve(pagePath)
-        : join(pagesDir, pagePath)
+        : join(pageBase, pagePath)
 
       page = posix.normalize(pageUrl)
 
@@ -182,7 +185,7 @@ export default function onDemandEntryHandler(
 
         if (entryInfo) {
           if (entryInfo.status === BUILT) {
-            resolve()
+            resolve(undefined)
             return
           }
 
@@ -206,7 +209,7 @@ export default function onDemandEntryHandler(
 
         function handleCallback(err: Error) {
           if (err) return reject(err)
-          resolve()
+          resolve(undefined)
         }
       })
     },
