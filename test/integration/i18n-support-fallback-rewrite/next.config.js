@@ -1,10 +1,14 @@
 module.exports = {
-  async rewrites() {
+  i18n: {
+    locales: ['en', 'fr'],
+    defaultLocale: 'en',
+  },
+  rewrites() {
     return {
       fallback: [
         {
           source: '/:path*',
-          destination: `https://custom-routes-proxying-endpoint.vercel.app/:path*`,
+          destination: '/another',
         },
       ],
     }
