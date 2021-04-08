@@ -1,5 +1,5 @@
 {
-  "name": "next",
+  "name": "@docler/next",
   "version": "10.1.4-canary.2",
   "description": "The React Framework",
   "main": "./dist/server/next.js",
