@@ -152,7 +152,7 @@ export default function ({
                   '+',
                   t.stringLiteral(
                     relativePath(
-                      state.file.opts.caller.pagesDir,
+                      state.file.opts.caller.pagesDirs[0],
                       state.file.opts.filename
                     ) + ' -> '
                   ),

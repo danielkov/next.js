@@ -311,7 +311,7 @@ export default class HotReloader {
       isServer: false,
       config: this.config,
       buildId: this.buildId,
-      pagesDir: this.pagesDir,
+      pagesDirs: this.pagesDirs,
       rewrites: {
         beforeFiles: [],
         afterFiles: [],
