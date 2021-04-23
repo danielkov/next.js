@@ -1,4 +1,3 @@
-import { ReactDevOverlay } from '@next/react-dev-overlay/lib/client'
 import crypto from 'crypto'
 import fs from 'fs'
 import { IncomingMessage, ServerResponse } from 'http'
@@ -57,6 +56,16 @@ const findPageName = (pagesDirs: string[], fileName: string) => {
     return '/' + pageName
   }
   return '/'
+}
+
+// Load ReactDevOverlay only when needed
+let ReactDevOverlayImpl: React.FunctionComponent
+const ReactDevOverlay = (props: any) => {
+  if (ReactDevOverlayImpl === undefined) {
+    ReactDevOverlayImpl = require('@next/react-dev-overlay/lib/client')
+      .ReactDevOverlay
+  }
+  return ReactDevOverlayImpl(props)
 }
 
 export default class DevServer extends Server {
@@ -312,6 +321,7 @@ export default class DevServer extends Server {
     const telemetry = new Telemetry({ distDir: this.distDir })
     telemetry.record(
       eventCliSession(PHASE_DEVELOPMENT_SERVER, this.distDir, {
+        webpackVersion: this.hotReloader.isWebpack5 ? 5 : 4,
         cliCommand: 'dev',
         isSrcDir: relative(this.dir, this.pagesDirs![0]).startsWith('src'),
         hasNowJson: !!(await findUp('now.json', { cwd: this.dir })),
