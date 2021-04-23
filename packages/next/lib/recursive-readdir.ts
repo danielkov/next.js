@@ -53,7 +53,7 @@ export async function recursiveReadDirs(
   )
   return [
     ...results.reduce((result, next) => {
-      next.forEach(result.add, dirs)
+      next.forEach(result.add, result)
       return result
     }, new Set<string>()),
   ]
