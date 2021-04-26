@@ -1,6 +1,6 @@
 {
   "name": "@docler/next",
-  "version": "10.1.4-canary.2",
+  "version": "10.1.4-canary.2.1",
   "description": "The React Framework",
   "main": "./dist/server/next.js",
   "license": "MIT",
